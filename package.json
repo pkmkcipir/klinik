@@ -1,0 +1,49 @@
+{
+  "name": "sistem-antrian-klinik",
+  "productName": "SistemAntrianKlinik",
+  "version": "1.4.0",
+  "description": "Aplikasi Sistem Antrian Klinik Bidan Dewi Anjani, Suara Neural Bahasa Indonesia Cewek & Cowok",
+  "main": "main.js",
+  "author": "iman.mn_",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "xlsx": "^0.18.5"
+  },
+  "build": {
+    "appId": "com.imanmn.sistemantrianklinik",
+    "productName": "SistemAntrianKlinik",
+    "files": [
+      "main.js",
+      "index.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SistemAntrianKlinik"
+    }
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}
