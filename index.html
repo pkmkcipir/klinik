@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SistemAntrianKlinik - Klinik Bidan Dewi Anjani (@copyright iman.mn_)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+    .marquee {
+      white-space: nowrap;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .marquee span {
+      display: inline-block;
+      padding-left: 100%;
+      animation: marquee 24s linear infinite;
+    }
+    @keyframes marquee {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-100%, 0); }
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 260px;
+        padding: 10px;
+        text-align: center;
+        color: #000;
+        background: #fff;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastNotif" class="hidden fixed bottom-12 right-6 bg-emerald-800 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-bold z-50 border border-emerald-400">
+    Notifikasi Sistem
+  </div>
+
+  <!-- MODAL KONFIRMASI HAPUS (Custom Non-Blocking Modal agar Input tidak terkunci di Windows) -->
+  <div id="confirmModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border-t-4 border-red-600">
+      <div class="flex items-center gap-3">
+        <div class="bg-red-100 text-red-700 font-black px-3 py-1.5 rounded-full text-lg">⚠️</div>
+        <h3 id="confirmModalTitle" class="text-base font-extrabold text-slate-800">Konfirmasi Hapus Data</h3>
+      </div>
+      <p id="confirmModalDesc" class="text-xs text-slate-600 leading-relaxed">
+        Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.
+      </p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeConfirmModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-bold cursor-pointer">
+          Batal
+        </button>
+        <button type="button" id="confirmModalYesBtn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold cursor-pointer shadow">
+          Ya, Hapus Data
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BANNER AKTIFKAN SUARA & FULLSCREEN KHUSUS DI SMART TV -->
+  <div id="tvAudioUnlockBanner" class="hidden bg-amber-500 text-slate-900 px-4 py-2 flex justify-between items-center shadow-md z-50">
+    <div class="text-sm font-bold">
+      📺 Mode Layar Smart TV Aktif — Klik tombol di kanan agar suara video, suara pemanggilan & layar penuh aktif di TV ini.
+    </div>
+    <button type="button" onclick="unlockTvAudioAndFullscreen()" class="bg-slate-900 text-white px-4 py-1.5 rounded-lg text-xs font-extrabold hover:bg-slate-800 cursor-pointer">
+      🔊 Aktifkan Suara & Layar Penuh TV
+    </button>
+  </div>
+
+  <!-- NAVBAR ADMIN -->
+  <header id="adminNav" class="bg-emerald-800 text-white px-6 py-3 flex items-center justify-between shadow-md">
+    <div class="flex items-center gap-3">
+      <div class="bg-white text-emerald-800 font-black px-3 py-1 rounded-lg text-lg">KBDA</div>
+      <div>
+        <h1 id="navClinicName" class="font-bold text-lg leading-tight">Klinik Bidan Dewi Anjani</h1>
+        <p id="navClinicPhone" class="text-xs text-emerald-200">Poli Kandungan (Poli Obgyn) | Telp: 085178266540</p>
+      </div>
+    </div>
+    <nav class="flex gap-2 text-sm font-semibold items-center flex-wrap">
+      <button type="button" id="nav-btn-viewer" onclick="switchTab('viewer')" class="tab-btn bg-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-500 cursor-pointer">Monitor TV</button>
+      <button type="button" id="nav-btn-loket" onclick="switchTab('loket')" class="tab-btn bg-emerald-900/60 px-3 py-2 rounded-lg hover:bg-emerald-600 cursor-pointer">Loket & Panggil</button>
+      <button type="button" id="nav-btn-pasien" onclick="switchTab('pasien')" class="tab-btn bg-emerald-900/60 px-3 py-2 rounded-lg hover:bg-emerald-600 cursor-pointer">Data Pasien</button>
+      <button type="button" id="nav-btn-laporan" onclick="switchTab('laporan')" class="tab-btn bg-emerald-900/60 px-3 py-2 rounded-lg hover:bg-emerald-600 cursor-pointer">Laporan Keuangan & Obat</button>
+      <button type="button" id="nav-btn-pengaturan" onclick="switchTab('pengaturan')" class="tab-btn bg-emerald-900/60 px-3 py-2 rounded-lg hover:bg-emerald-600 cursor-pointer">Pengaturan & Video</button>
+      <button type="button" onclick="showNetworkTvModal()" class="bg-sky-400 text-slate-900 px-3 py-2 rounded-lg hover:bg-sky-300 font-extrabold ml-1 cursor-pointer">
+        📡 Hubungkan TV (Wi-Fi/LAN)
+      </button>
+      <button type="button" onclick="openSeparateViewer()" class="bg-amber-500 text-slate-900 px-3 py-2 rounded-lg hover:bg-amber-400 font-bold cursor-pointer">
+        🖥️ Layar HDMI
+      </button>
+    </nav>
+  </header>
+
+  <!-- MODAL KONEKSI LAYAR TV JARINGAN LOKAL (WI-FI / LAN) -->
+  <div id="networkModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-lg font-extrabold text-emerald-800">📡 Tampilkan di Smart TV (Jaringan Wi-Fi / LAN)</h3>
+        <button type="button" onclick="closeNetworkTvModal()" class="text-slate-400 hover:text-slate-700 font-bold text-xl cursor-pointer">&times;</button>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Pastikan <strong>Smart TV / Android TV</strong> terhubung ke <strong>Wi-Fi atau jaringan LAN yang sama</strong> dengan komputer ini, lalu buka alamat URL berikut di Browser TV:
+      </p>
+      <div id="networkUrlList" class="space-y-2 bg-slate-50 p-3 rounded-xl border"></div>
+      <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-900 space-y-1">
+        <div class="font-bold">💡 Tips Koneksi Windows 11:</div>
+        <div>Jika muncul jendela <em>Windows Defender Firewall</em>, centang <strong>Private networks</strong> dan klik <strong>Allow access</strong> agar TV dapat mengakses port <code>3000</code>.</div>
+      </div>
+      <div class="text-right pt-2">
+        <button type="button" onclick="closeNetworkTvModal()" class="bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-emerald-600 cursor-pointer">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="flex-1 overflow-y-auto p-4">
+
+    <!-- ==================== TAB 1: MONITOR TV ANTRIAN ==================== -->
+    <section id="tab-viewer" class="h-full flex flex-col justify-between gap-4">
+      <div class="bg-gradient-to-r from-teal-700 to-emerald-600 text-white p-4 rounded-xl shadow flex justify-between items-center">
+        <div class="max-w-3xl">
+          <h2 id="tvClinicName" class="text-2xl font-black tracking-wide uppercase">Klinik Bidan Dewi Anjani</h2>
+          <p id="tvClinicAddress" class="text-xs text-emerald-100 mt-0.5">
+            Kavling Tanah Harapan No.D63, RT.011/RW.006, Pejuang, Medan Satria, Bekasi, West Java 17131
+          </p>
+          <p class="text-xs font-bold text-amber-300 mt-0.5">
+            📞 Telp / Informasi: <span id="tvClinicPhone">085178266540</span>
+          </p>
+        </div>
+        <div class="text-right">
+          <div id="liveClock" class="text-3xl font-black">00:00:00</div>
+          <div id="liveDate" class="text-sm text-emerald-100">Minggu, 18 Oktober 2026</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-12 gap-4 flex-1 min-h-0">
+        <!-- Kotak Nomor Antrian Dipanggil -->
+        <div class="col-span-5 bg-white rounded-2xl shadow-lg border-4 border-emerald-600 flex flex-col justify-between overflow-hidden">
+          <div class="bg-emerald-600 text-white text-center py-3 font-extrabold text-xl tracking-wider">
+            NOMOR ANTRIAN DIPANGGIL
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center p-4">
+            <span class="text-slate-400 font-bold text-sm uppercase tracking-widest">Nomor Antrian</span>
+            <div id="tvCurrentNumber" class="text-8xl font-black text-emerald-700 my-3 animate-pulse">-</div>
+            <div class="w-3/4 border-b-2 border-dashed border-slate-200 my-2"></div>
+            <span class="text-slate-400 font-bold text-xs uppercase">Silakan Menuju Ke:</span>
+            <div id="tvCurrentPoli" class="text-2xl font-extrabold text-pink-600 mt-1 text-center">
+              POLI KANDUNGAN (POLI OBGYN)
+            </div>
+          </div>
+          <div class="bg-emerald-50 text-emerald-800 text-center py-2 text-xs font-semibold">
+            Harap siapkan buku KIA / Kartu Identitas / KTP Anda
+          </div>
+        </div>
+
+        <!-- Kotak Video Edukasi Kesehatan (Playlist Berulang + Auto-Mute Saat Panggilan) -->
+        <div class="col-span-7 bg-slate-900 rounded-2xl shadow-lg overflow-hidden flex flex-col border-2 border-slate-700">
+          <div class="bg-slate-800 text-white px-4 py-2 flex justify-between items-center text-sm font-bold">
+            <div class="flex items-center gap-2">
+              <span>🎬 VIDEO EDUKASI KESEHATAN IBU & KANDUNGAN</span>
+              <span id="tvPlaylistCounter" class="text-xs bg-emerald-600 px-2 py-0.5 rounded font-semibold">Playlist 1/1</span>
+              <span id="videoCallDuckingBadge" class="hidden text-xs bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-extrabold animate-pulse">
+                🔇 Suara Video Otomatis Mati (Panggilan Antrian...)
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="prevPlaylistVideo()" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs cursor-pointer">⏮ Prev</button>
+              <button type="button" onclick="nextPlaylistVideo()" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs cursor-pointer">Next ⏭</button>
+              <button type="button" onclick="toggleVideoMute()" id="btnMuteToggle" class="bg-emerald-500 text-slate-900 px-2.5 py-0.5 rounded text-xs font-bold cursor-pointer">🔊 Suara Video: ON</button>
+            </div>
+          </div>
+          <div class="flex-1 relative bg-black flex items-center justify-center">
+            <video id="eduVideoPlayer" class="w-full h-full object-contain" controls autoplay playsinline></video>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bawah: Panel Status 1 Poli Utama (Poli Kandungan / Obgyn) -->
+      <div class="grid grid-cols-4 gap-4">
+        <div class="col-span-2 bg-white rounded-xl shadow border-l-8 border-pink-600 p-3 flex items-center justify-between px-6">
+          <div>
+            <div class="text-xs font-bold text-slate-500 uppercase">LAYANAN UTAMA KLINIK</div>
+            <div class="text-xl font-black text-pink-700">POLI KANDUNGAN (POLI OBGYN)</div>
+            <div id="tvCardClinicName" class="text-xs text-slate-500">Klinik Bidan Dewi Anjani</div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-bold text-slate-400 uppercase block">Sedang Dilayani</span>
+            <span id="cardPoliA" class="text-4xl font-black text-emerald-700">-</span>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow border-t-4 border-teal-600 p-3 text-center">
+          <div class="text-xs font-bold text-slate-500 uppercase">TOTAL ANTRIAN HARI INI</div>
+          <div id="cardTotalQueue" class="text-4xl font-black text-teal-700 mt-1">0</div>
+        </div>
+        <div class="bg-white rounded-xl shadow border-t-4 border-amber-500 p-3 text-center">
+          <div class="text-xs font-bold text-slate-500 uppercase">MENUNGGU PANGGILAN</div>
+          <div id="cardWaitingQueue" class="text-4xl font-black text-amber-600 mt-1">0</div>
+        </div>
+      </div>
+
+      <!-- Running Text -->
+      <div class="bg-emerald-900 text-white py-2 px-4 rounded-lg marquee font-semibold text-sm">
+        <span id="tvRunningText">Selamat Datang di Klinik Bidan Dewi Anjani — Layanan Poli Kandungan (Poli Obgyn) — Info Hubungi: 085178266540.</span>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: LOKET CETAK & PANGGIL ANTRIAN ==================== -->
+    <section id="tab-loket" class="hidden space-y-6">
+      <div class="grid grid-cols-12 gap-6">
+        <div class="col-span-5 bg-white p-6 rounded-xl shadow flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-emerald-800 border-b pb-2 mb-4">Cetak Tiket Antrian Pasien</h3>
+            <p class="text-xs text-slate-500 mb-4">Klik tombol di bawah saat pasien datang untuk mengambil nomor dan mencetak struk antrian Poli Kandungan (Poli Obgyn):</p>
+            <button type="button" onclick="takeQueue('A', 'POLI KANDUNGAN (POLI OBGYN)')" class="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white p-8 rounded-2xl font-bold text-center shadow-lg transition transform active:scale-95 cursor-pointer">
+              <div class="text-xs uppercase tracking-widest opacity-90">KODE ANTRIAN A</div>
+              <div class="text-2xl font-black my-2">POLI KANDUNGAN (POLI OBGYN)</div>
+              <div class="inline-block bg-white text-pink-700 px-4 py-1.5 rounded-full text-xs font-extrabold mt-2 shadow">
+                🖨️ Ambil Nomor & Cetak Struk Antrian
+              </div>
+            </button>
+          </div>
+
+          <div class="mt-6 flex justify-between items-center bg-slate-50 p-3 rounded-lg border">
+            <span class="text-xs text-slate-500">Reset urutan nomor antrian hari ini ke 0:</span>
+            <button type="button" onclick="resetAllQueues()" class="bg-red-600 text-white text-xs px-3 py-1.5 rounded font-bold hover:bg-red-500 cursor-pointer">Reset Antrian</button>
+          </div>
+        </div>
+
+        <div class="col-span-7 bg-white p-6 rounded-xl shadow">
+          <div class="flex justify-between items-center border-b pb-2 mb-4">
+            <h3 class="text-lg font-bold text-emerald-800">Daftar Antrian Poli Kandungan (Poli Obgyn)</h3>
+            <span id="badgeVoiceType" class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold">Suara: Cewek (Gadis Neural ID)</span>
+          </div>
+          <div class="overflow-y-auto max-h-96">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
+                <tr>
+                  <th class="p-2.5">No. Antrian</th>
+                  <th class="p-2.5">Poli Tujuan</th>
+                  <th class="p-2.5">Status</th>
+                  <th class="p-2.5 text-right">Aksi Panggil Suara</th>
+                </tr>
+              </thead>
+              <tbody id="queueTableBody" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: DATA PASIEN (DENGAN PENCARIAN, EDIT & HAPUS) ==================== -->
+    <section id="tab-pasien" class="hidden space-y-6">
+      <div class="grid grid-cols-12 gap-6">
+        <form id="patientForm" onsubmit="savePatient(event)" class="col-span-4 bg-white p-5 rounded-xl shadow space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h3 id="patientFormTitle" class="font-bold text-emerald-800">Registrasi Data Pasien</h3>
+            <span id="patientEditBadge" class="hidden text-[11px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-extrabold">Mode Edit</span>
+          </div>
+          <input id="pNik" required placeholder="NIK / No. Identitas / No. Telepon" class="w-full border p-2 rounded text-sm select-text" />
+          <input id="pNama" required placeholder="Nama Lengkap Pasien" class="w-full border p-2 rounded text-sm select-text" />
+          <input id="pUmur" required type="number" placeholder="Usia (Tahun)" class="w-full border p-2 rounded text-sm select-text" />
+          <select id="pPoli" class="w-full border p-2 rounded text-sm font-semibold bg-pink-50 text-pink-900">
+            <option value="POLI KANDUNGAN (POLI OBGYN)">POLI KANDUNGAN (POLI OBGYN)</option>
+          </select>
+          <textarea id="pKeluhan" placeholder="Usia Kehamilan / Keluhan / Catatan Pemeriksaan Obgyn" class="w-full border p-2 rounded text-sm select-text"></textarea>
+          <div class="flex gap-2">
+            <button type="submit" id="pSubmitBtn" class="flex-1 bg-emerald-700 text-white py-2 rounded-lg font-bold hover:bg-emerald-600 cursor-pointer">
+              Simpan Data Pasien
+            </button>
+            <button type="button" id="pCancelEditBtn" onclick="cancelEditPatient()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">
+              Batal Edit
+            </button>
+          </div>
+        </form>
+
+        <div class="col-span-8 bg-white p-5 rounded-xl shadow space-y-3">
+          <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+            <div>
+              <h3 class="font-bold text-emerald-800">Database Lokal Pasien Poli Kandungan (Poli Obgyn)</h3>
+              <p class="text-[11px] text-slate-500">Cari, edit, atau hapus data pasien yang terdaftar di klinik</p>
+            </div>
+            <!-- Kotak Pencarian Pasien -->
+            <div class="flex items-center gap-2 w-72">
+              <div class="relative flex-1">
+                <input
+                  id="searchPatientInput"
+                  type="text"
+                  oninput="renderPatientsTable()"
+                  placeholder="🔍 Cari nama, NIK, usia, keluhan..."
+                  class="w-full border border-slate-300 pl-3 pr-7 py-1.5 rounded-lg text-xs select-text focus:outline-none focus:border-emerald-600"
+                />
+                <button
+                  type="button"
+                  onclick="document.getElementById('searchPatientInput').value=''; renderPatientsTable();"
+                  title="Bersihkan pencarian"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                >&times;</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-y-auto max-h-96">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-slate-100 text-xs uppercase text-slate-600">
+                <tr>
+                  <th class="p-2">Tanggal</th>
+                  <th class="p-2">NIK / Kontak</th>
+                  <th class="p-2">Nama Pasien</th>
+                  <th class="p-2">Usia</th>
+                  <th class="p-2">Poli</th>
+                  <th class="p-2">Catatan / Diagnosa</th>
+                  <th class="p-2 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="patientTableBody" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: LAPORAN MINGGUAN & BULANAN (DENGAN PENCARIAN, EDIT & HAPUS) ==================== -->
+    <section id="tab-laporan" class="hidden space-y-6">
+      <div class="bg-white p-4 rounded-xl shadow flex justify-between items-center">
+        <div>
+          <h3 class="font-bold text-emerald-800">Filter & Ekspor Laporan Klinik Bidan Dewi Anjani</h3>
+          <p class="text-xs text-slate-500">Pilih rekapitulasi mingguan (7 hari) atau bulanan (30 hari) lalu ekspor ke Excel (.xlsx)</p>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="setReportFilter('weekly')" id="btnWeekly" class="bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold cursor-pointer">Laporan Mingguan</button>
+          <button type="button" onclick="setReportFilter('monthly')" id="btnMonthly" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer">Laporan Bulanan</button>
+          <button type="button" onclick="exportReportToExcel()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-extrabold shadow flex items-center gap-1.5 ml-2 cursor-pointer">
+            <span>📥 Ekspor Excel (.xlsx)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-6">
+        <!-- KOLOM KIRI: LAPORAN KEUANGAN -->
+        <div class="bg-white p-5 rounded-xl shadow space-y-4">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h4 id="financeFormTitle" class="font-bold text-emerald-800">Laporan Keuangan Klinik</h4>
+            <span id="financeEditBadge" class="hidden text-[11px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-extrabold">Mode Edit Transaksi</span>
+          </div>
+
+          <form id="financeForm" onsubmit="addFinance(event)" class="grid grid-cols-3 gap-2">
+            <input id="fKet" required placeholder="Keterangan (USG/ANC/Obat/Operasional)" class="border p-2 rounded text-sm col-span-2 select-text" />
+            <input id="fNominal" required type="number" placeholder="Nominal (Rp)" class="border p-2 rounded text-sm select-text" />
+            <select id="fTipe" class="border p-2 rounded text-sm col-span-2">
+              <option value="MASUK">Pemasukan (Pemeriksaan Kandungan/USG/Obat)</option>
+              <option value="KELUAR">Pengeluaran Operasional</option>
+            </select>
+            <div class="flex gap-1">
+              <button type="submit" id="fSubmitBtn" class="flex-1 bg-teal-600 hover:bg-teal-500 text-white rounded font-bold text-xs py-2 cursor-pointer">+ Catat</button>
+              <button type="button" id="fCancelEditBtn" onclick="cancelEditFinance()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 rounded text-xs font-bold cursor-pointer">Batal</button>
+            </div>
+          </form>
+
+          <!-- Ringkasan & Pencarian Keuangan -->
+          <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg text-sm border">
+            <div>Total Pemasukan: <span id="sumMasuk" class="font-bold text-emerald-700">Rp 0</span></div>
+            <div>Total Pengeluaran: <span id="sumKeluar" class="font-bold text-red-600">Rp 0</span></div>
+          </div>
+
+          <div class="relative">
+            <input
+              id="searchFinanceInput"
+              type="text"
+              oninput="renderReports()"
+              placeholder="🔍 Cari transaksi keuangan (keterangan, tipe, nominal, tanggal)..."
+              class="w-full border border-slate-300 pl-3 pr-7 py-1.5 rounded-lg text-xs select-text focus:outline-none focus:border-teal-600"
+            />
+            <button
+              type="button"
+              onclick="document.getElementById('searchFinanceInput').value=''; renderReports();"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+            >&times;</button>
+          </div>
+
+          <div class="overflow-y-auto max-h-56">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-100 uppercase text-slate-600">
+                <tr>
+                  <th class="p-2">Tanggal</th>
+                  <th class="p-2">Keterangan</th>
+                  <th class="p-2">Tipe</th>
+                  <th class="p-2">Nominal</th>
+                  <th class="p-2 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="financeTableBody" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- KOLOM KANAN: LAPORAN OBAT -->
+        <div class="bg-white p-5 rounded-xl shadow space-y-4">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h4 id="medicineFormTitle" class="font-bold text-emerald-800">Laporan Stok & Pemakaian Obat / Vitamin</h4>
+            <span id="medicineEditBadge" class="hidden text-[11px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-extrabold">Mode Edit Obat</span>
+          </div>
+
+          <form id="medicineForm" onsubmit="addMedicine(event)" class="grid grid-cols-3 gap-2">
+            <input id="mNama" required placeholder="Nama Obat / Vitamin Ibu Hamil" class="border p-2 rounded text-sm select-text" />
+            <input id="mJumlah" required type="number" placeholder="Jumlah Unit" class="border p-2 rounded text-sm select-text" />
+            <select id="mStatus" class="border p-2 rounded text-sm">
+              <option value="KELUAR">Obat Keluar (Resep Pasien)</option>
+              <option value="MASUK">Stok Obat Masuk</option>
+            </select>
+            <div class="col-span-3 flex gap-2">
+              <button type="submit" id="mSubmitBtn" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold text-sm py-2 cursor-pointer">+ Simpan Data Obat</button>
+              <button type="button" id="mCancelEditBtn" onclick="cancelEditMedicine()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded text-xs font-bold cursor-pointer">Batal Edit</button>
+            </div>
+          </form>
+
+          <!-- Ringkasan & Pencarian Obat -->
+          <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg text-sm border">
+            <div>Total Obat Masuk: <span id="sumObatMasuk" class="font-bold text-blue-700">0 Unit</span></div>
+            <div>Total Obat Keluar: <span id="sumObatKeluar" class="font-bold text-amber-700">0 Unit</span></div>
+          </div>
+
+          <div class="relative">
+            <input
+              id="searchMedicineInput"
+              type="text"
+              oninput="renderReports()"
+              placeholder="🔍 Cari data obat (nama obat, status masuk/keluar, jumlah, tanggal)..."
+              class="w-full border border-slate-300 pl-3 pr-7 py-1.5 rounded-lg text-xs select-text focus:outline-none focus:border-amber-600"
+            />
+            <button
+              type="button"
+              onclick="document.getElementById('searchMedicineInput').value=''; renderReports();"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+            >&times;</button>
+          </div>
+
+          <div class="overflow-y-auto max-h-56">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-100 uppercase text-slate-600">
+                <tr>
+                  <th class="p-2">Tanggal</th>
+                  <th class="p-2">Nama Obat</th>
+                  <th class="p-2">Status</th>
+                  <th class="p-2">Jumlah</th>
+                  <th class="p-2 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="medicineTableBody" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: PENGATURAN & PLAYLIST VIDEO EDUKASI ==================== -->
+    <section id="tab-pengaturan" class="hidden max-w-3xl mx-auto bg-white p-6 rounded-xl shadow space-y-4">
+      <h3 class="text-lg font-bold text-emerald-800 border-b pb-2">Pengaturan Klinik, Suara Neural Indonesia & Playlist Video</h3>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-bold text-slate-600">Nama Klinik</label>
+          <input id="setClinicName" class="w-full border p-2 rounded text-sm mt-1 select-text" />
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-600">Nomor Telepon Klinik</label>
+          <input id="setClinicPhone" class="w-full border p-2 rounded text-sm mt-1 select-text" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600">Alamat Lengkap Klinik</label>
+        <input id="setClinicAddress" class="w-full border p-2 rounded text-sm mt-1 select-text" />
+      </div>
+
+      <div>
+        <label class="text-xs font-bold text-slate-600">Teks Berjalan (Running Text di Bawah Monitor TV)</label>
+        <input id="setRunningText" class="w-full border p-2 rounded text-sm mt-1 select-text" />
+      </div>
+
+      <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl space-y-2">
+        <label class="text-xs font-extrabold text-emerald-900">🎙️ Pilih Suara Pemanggilan Antrian (Neural Bahasa Indonesia Asli)</label>
+        <div class="flex gap-3">
+          <select id="setVoiceGender" class="flex-1 border p-2 rounded-lg text-sm font-bold bg-white text-slate-800">
+            <option value="female">👩 Suara Cewek — Gadis Neural (Perempuan Bahasa Indonesia Asli)</option>
+            <option value="male">👨 Suara Cowok — Ardi Neural (Laki-laki Bahasa Indonesia Asli)</option>
+          </select>
+          <button type="button" onclick="testVoice()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 py-2 rounded-lg font-extrabold text-sm cursor-pointer shadow">
+            🔊 Tes Suara Sekarang
+          </button>
+        </div>
+        <p class="text-[11px] text-emerald-700">
+          Saat pemanggilan antrian berlangsung, <strong>suara Video Edukasi akan otomatis dimatikan sementara (auto-mute)</strong> dan otomatis menyala kembali setelah panggilan selesai.
+        </p>
+      </div>
+
+      <div class="border-t pt-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <div>
+            <label class="text-sm font-bold text-emerald-800">🎬 Playlist Video Edukasi (Putar Berulang Otomatis / Loop)</label>
+            <p class="text-xs text-slate-500">Pilih satu atau banyak file video (.mp4 / .webm) dari komputer Anda untuk diputar berurutan dan berulang terus-menerus.</p>
+          </div>
+          <button type="button" onclick="pickLocalVideoFiles()" class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow cursor-pointer">
+            📂 Pilih Banyak File Video Lokal
+          </button>
+        </div>
+
+        <div class="flex gap-2">
+          <input id="manualVideoInput" placeholder="Atau tempel path lokal / URL video .mp4 lalu klik Tambah ke Playlist" class="flex-1 border p-2 rounded text-xs select-text" />
+          <button type="button" onclick="addManualVideoToPlaylist()" class="bg-slate-700 text-white px-3 py-2 rounded text-xs font-bold hover:bg-slate-600 cursor-pointer">
+            + Tambah ke Playlist
+          </button>
+        </div>
+
+        <div class="bg-slate-50 border rounded-xl p-3 max-h-48 overflow-y-auto">
+          <ul id="playlistItemsContainer" class="space-y-1.5 text-xs"></ul>
+        </div>
+      </div>
+
+      <button type="button" onclick="saveSettings()" class="w-full bg-emerald-700 text-white py-2.5 rounded-lg font-bold hover:bg-emerald-600 shadow cursor-pointer">
+        💾 Simpan Semua Pengaturan & Terapkan ke Monitor TV
+      </button>
+    </section>
+  </main>
+
+  <!-- AREA CETAK STRUK THERMAL -->
+  <div id="printArea" class="hidden">
+    <div style="font-weight:bold; font-size:14px;" id="printClinicName">Klinik Bidan Dewi Anjani</div>
+    <div style="font-size:9px; margin-top:2px;" id="printClinicAddress">Alamat Klinik</div>
+    <div style="font-size:10px; font-weight:bold; margin-bottom:6px;" id="printClinicPhone">Telp: 085178266540</div>
+    <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:8px 0; margin:8px 0;">
+      <div style="font-size:11px;">NOMOR ANTRIAN ANDA</div>
+      <div style="font-size:42px; font-weight:900;" id="printNumber">A-001</div>
+      <div style="font-size:12px; font-weight:bold;" id="printPoli">POLI KANDUNGAN (POLI OBGYN)</div>
+    </div>
+    <div style="font-size:9px;" id="printTime">18/10/2026 08:00</div>
+    <div style="font-size:9px; margin-top:4px;">Terima kasih, silakan menunggu panggilan</div>
+    <div style="font-size:8px; margin-top:6px;">@copyright iman.mn_</div>
+  </div>
+
+  <!-- WATERMARK FOOTER WAJIB -->
+  <footer class="bg-slate-900 text-slate-300 px-6 py-2 text-xs flex justify-between items-center">
+    <span>Aplikasi Desktop <strong>SistemAntrianKlinik</strong> — Klinik Bidan Dewi Anjani (Telp: 085178266540)</span>
+    <span class="font-bold text-emerald-400 tracking-wide">@copyright iman.mn_</span>
+  </footer>
+
+  <script>
+    const isElectron = typeof window.require === 'function';
+    const ipcRenderer = isElectron ? window.require('electron').ipcRenderer : null;
+
+    let db = null;
+    let reportPeriod = 'weekly';
+    let currentVideoIndex = 0;
+    let currentPlaylistSignature = '';
+    let sharedAudioCtx = null;
+    let activeAudioSource = null;
+
+    // Variabel kontrol Auto-Mute (Ducking) Video Edukasi saat panggilan antrian aktif
+    let userManuallyMutedVideo = false;
+    let isQueueCallSpeaking = false;
+    let currentCallSequenceId = 0;
+
+    // State indeks yang sedang diedit pada Tabel Pasien, Keuangan, dan Obat (-1 = Mode Tambah Baru)
+    let editingPatientIndex = -1;
+    let editingFinanceIndex = -1;
+    let editingMedicineIndex = -1;
+    let pendingConfirmAction = null;
+
+    function getAudioContext() {
+      if (!sharedAudioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        sharedAudioCtx = new AudioCtx();
+      }
+      if (sharedAudioCtx.state === 'suspended') {
+        sharedAudioCtx.resume().catch(() => {});
+      }
+      return sharedAudioCtx;
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toastNotif');
+      if (!el) return;
+      el.innerText = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => {
+        el.classList.add('hidden');
+      }, 3200);
+    }
+
+    function openConfirmModal(title, desc, onYesCallback) {
+      document.getElementById('confirmModalTitle').innerText = title;
+      document.getElementById('confirmModalDesc').innerText = desc;
+      pendingConfirmAction = onYesCallback;
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      pendingConfirmAction = null;
+      document.getElementById('confirmModal').classList.add('hidden');
+    }
+
+    document.getElementById('confirmModalYesBtn').addEventListener('click', async () => {
+      const fn = pendingConfirmAction;
+      closeConfirmModal();
+      if (typeof fn === 'function') {
+        await fn();
+      }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const isViewerMode = !isElectron || urlParams.get('mode') === 'viewer';
+
+    if (isViewerMode) {
+      document.getElementById('adminNav').classList.add('hidden');
+      if (!isElectron) {
+        document.getElementById('tvAudioUnlockBanner').classList.remove('hidden');
+      }
+    }
+
+    const videoPlayer = document.getElementById('eduVideoPlayer');
+
+    function applyVideoMuteState(speakingNow) {
+      isQueueCallSpeaking = Boolean(speakingNow);
+      const duckBadge = document.getElementById('videoCallDuckingBadge');
+      const btnMute = document.getElementById('btnMuteToggle');
+
+      if (isQueueCallSpeaking) {
+        videoPlayer.muted = true;
+        videoPlayer.volume = 0;
+        if (duckBadge) duckBadge.classList.remove('hidden');
+        if (btnMute) {
+          btnMute.innerText = '🔇 Dimatikan Sementara (Panggilan...)';
+          btnMute.className = 'bg-rose-600 text-white px-2.5 py-0.5 rounded text-xs font-bold cursor-pointer';
+        }
+      } else {
+        if (duckBadge) duckBadge.classList.add('hidden');
+        videoPlayer.muted = userManuallyMutedVideo;
+        videoPlayer.volume = userManuallyMutedVideo ? 0 : 1.0;
+
+        if (videoPlayer.paused && videoPlayer.src) {
+          videoPlayer.play().catch(() => {});
+        }
+        updateMuteButtonUI();
+      }
+    }
+
+    function updateMuteButtonUI() {
+      const btnMute = document.getElementById('btnMuteToggle');
+      if (!btnMute) return;
+      if (videoPlayer.muted || userManuallyMutedVideo) {
+        btnMute.innerText = '🔇 Suara Video: OFF (Klik untuk ON)';
+        btnMute.className = 'bg-amber-500 text-slate-900 px-2.5 py-0.5 rounded text-xs font-bold cursor-pointer';
+      } else {
+        btnMute.innerText = '🔊 Suara Video: ON';
+        btnMute.className = 'bg-emerald-500 text-slate-900 px-2.5 py-0.5 rounded text-xs font-bold cursor-pointer';
+      }
+    }
+
+    function unlockTvAudioAndFullscreen() {
+      document.getElementById('tvAudioUnlockBanner').classList.add('hidden');
+      userManuallyMutedVideo = false;
+      videoPlayer.muted = false;
+      videoPlayer.volume = 1.0;
+      updateMuteButtonUI();
+      getAudioContext();
+      playChime();
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
+
+    setInterval(() => {
+      const now = new Date();
+      const clockEl = document.getElementById('liveClock');
+      const dateEl = document.getElementById('liveDate');
+      if (clockEl) clockEl.innerText = now.toLocaleTimeString('id-ID');
+      if (dateEl) dateEl.innerText = now.toLocaleDateString('id-ID', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }, 1000);
+
+    function switchTab(tabName) {
+      const tabs = ['viewer', 'loket', 'pasien', 'laporan', 'pengaturan'];
+      tabs.forEach(t => {
+        const sec = document.getElementById('tab-' + t);
+        if (sec) sec.classList.add('hidden');
+        const btn = document.getElementById('nav-btn-' + t);
+        if (btn) {
+          btn.className = (t === tabName)
+            ? 'tab-btn bg-emerald-600 px-3 py-2 rounded-lg hover:bg-emerald-500 cursor-pointer'
+            : 'tab-btn bg-emerald-900/60 px-3 py-2 rounded-lg hover:bg-emerald-600 cursor-pointer';
+        }
+      });
+      const activeSec = document.getElementById('tab-' + tabName);
+      if (activeSec) activeSec.classList.remove('hidden');
+    }
+
+    function openSeparateViewer() {
+      if (ipcRenderer) {
+        ipcRenderer.send('open-viewer-window');
+        showToast('Membuka jendela Monitor TV ke-2...');
+      }
+    }
+
+    videoPlayer.addEventListener('ended', () => {
+      nextPlaylistVideo();
+    });
+
+    videoPlayer.addEventListener('error', () => {
+      setTimeout(() => nextPlaylistVideo(), 2000);
+    });
+
+    function getPlaylistUrl(index) {
+      if (!db || !db.settings.videoPlaylist || db.settings.videoPlaylist.length === 0) {
+        return '';
+      }
+      const rawPath = db.settings.videoPlaylist[index];
+      if (!rawPath) return '';
+      if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+        return rawPath;
+      }
+      if (!isElectron) {
+        return '/video?idx=' + index + '&t=' + Date.now();
+      }
+      const normalized = rawPath.split('\\').join('/');
+      return normalized.startsWith('file://') ? normalized : ('file:///' + normalized);
+    }
+
+    function playVideoAtIndex(index) {
+      const playlist = (db && db.settings.videoPlaylist) ? db.settings.videoPlaylist : [];
+      if (playlist.length === 0) return;
+
+      currentVideoIndex = ((index % playlist.length) + playlist.length) % playlist.length;
+      const srcUrl = getPlaylistUrl(currentVideoIndex);
+
+      videoPlayer.loop = (playlist.length === 1);
+      videoPlayer.muted = isQueueCallSpeaking ? true : userManuallyMutedVideo;
+      videoPlayer.volume = videoPlayer.muted ? 0 : 1.0;
+      videoPlayer.src = srcUrl;
+      videoPlayer.load();
+      videoPlayer.play().catch(() => {
+        if (!isElectron) {
+          videoPlayer.muted = true;
+          videoPlayer.play().catch(() => {});
+        }
+      });
+
+      updateMuteButtonUI();
+
+      const counterEl = document.getElementById('tvPlaylistCounter');
+      if (counterEl) {
+        counterEl.innerText = 'Playlist ' + (currentVideoIndex + 1) + '/' + playlist.length;
+      }
+    }
+
+    function nextPlaylistVideo() {
+      const playlist = (db && db.settings.videoPlaylist) ? db.settings.videoPlaylist : [];
+      if (playlist.length === 0) return;
+      playVideoAtIndex(currentVideoIndex + 1);
+    }
+
+    function prevPlaylistVideo() {
+      const playlist = (db && db.settings.videoPlaylist) ? db.settings.videoPlaylist : [];
+      if (playlist.length === 0) return;
+      playVideoAtIndex(currentVideoIndex - 1);
+    }
+
+    function toggleVideoMute() {
+      userManuallyMutedVideo = !userManuallyMutedVideo;
+      if (!isQueueCallSpeaking) {
+        videoPlayer.muted = userManuallyMutedVideo;
+        videoPlayer.volume = userManuallyMutedVideo ? 0 : 1.0;
+      }
+      updateMuteButtonUI();
+    }
+
+    async function pickLocalVideoFiles() {
+      if (!ipcRenderer) return;
+      const result = await ipcRenderer.invoke('select-local-videos');
+      if (!result.canceled && result.filePaths.length > 0) {
+        db.settings.videoPlaylist = db.settings.videoPlaylist.concat(result.filePaths);
+        renderPlaylistEditor();
+        showToast(result.filePaths.length + ' video ditambahkan ke daftar playlist');
+      }
+    }
+
+    function addManualVideoToPlaylist() {
+      const val = document.getElementById('manualVideoInput').value.trim();
+      if (!val) return;
+      db.settings.videoPlaylist.push(val);
+      document.getElementById('manualVideoInput').value = '';
+      renderPlaylistEditor();
+      showToast('Video ditambahkan ke playlist');
+    }
+
+    function removeVideoFromPlaylist(idx) {
+      db.settings.videoPlaylist.splice(idx, 1);
+      renderPlaylistEditor();
+    }
+
+    function moveVideoUp(idx) {
+      if (idx <= 0) return;
+      const temp = db.settings.videoPlaylist[idx - 1];
+      db.settings.videoPlaylist[idx - 1] = db.settings.videoPlaylist[idx];
+      db.settings.videoPlaylist[idx] = temp;
+      renderPlaylistEditor();
+    }
+
+    function renderPlaylistEditor() {
+      const container = document.getElementById('playlistItemsContainer');
+      if (!container || !db) return;
+      const list = db.settings.videoPlaylist || [];
+      if (list.length === 0) {
+        container.innerHTML = '<li class="text-slate-400 italic p-2">Belum ada video dalam playlist. Klik "Pilih Banyak File Video Lokal" di atas.</li>';
+        return;
+      }
+      container.innerHTML = list.map((item, idx) => {
+        const fileName = item.split('\\').join('/').split('/').pop();
+        return `
+          <li class="flex items-center justify-between bg-white px-3 py-2 rounded-lg border shadow-sm">
+            <div class="truncate pr-3">
+              <span class="font-bold text-emerald-700 mr-1">#${idx + 1}</span>
+              <span class="font-semibold text-slate-800">${fileName}</span>
+              <span class="text-slate-400 block text-[10px] truncate">${item}</span>
+            </div>
+            <div class="flex gap-1 shrink-0">
+              <button type="button" onclick="playVideoAtIndex(${idx})" class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-bold hover:bg-emerald-200 cursor-pointer">▶ Putar</button>
+              <button type="button" onclick="moveVideoUp(${idx})" class="bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold hover:bg-slate-300 cursor-pointer">↑</button>
+              <button type="button" onclick="removeVideoFromPlaylist(${idx})" class="bg-red-100 text-red-700 px-2 py-1 rounded font-bold hover:bg-red-200 cursor-pointer">Hapus</button>
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+
+    function copyUrlToClipboard(urlText) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(urlText);
+      }
+      showToast('URL TV berhasil disalin: ' + urlText);
+    }
+
+    async function showNetworkTvModal() {
+      if (!ipcRenderer) return;
+      const info = await ipcRenderer.invoke('get-network-info');
+      const listEl = document.getElementById('networkUrlList');
+      listEl.innerHTML = info.urls.map(item => `
+        <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border">
+          <div>
+            <div class="text-xs font-bold text-slate-500">${item.name}</div>
+            <div class="text-base font-black text-emerald-700 select-all">${item.url}</div>
+          </div>
+          <button type="button" onclick="copyUrlToClipboard('${item.url}')" class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded text-xs font-bold hover:bg-emerald-200 cursor-pointer">
+            Salin URL
+          </button>
+        </div>
+      `).join('');
+      document.getElementById('networkModal').classList.remove('hidden');
+    }
+
+    function closeNetworkTvModal() {
+      document.getElementById('networkModal').classList.add('hidden');
+    }
+
+    async function initApp() {
+      try {
+        if (isElectron) {
+          db = await ipcRenderer.invoke('get-db');
+          renderAll();
+          ipcRenderer.on('db-updated', (event, updatedDb) => {
+            db = updatedDb;
+            renderAll();
+          });
+          ipcRenderer.on('apply-video-ducking', (event, isSpeaking) => {
+            applyVideoMuteState(isSpeaking);
+          });
+        } else {
+          const res = await fetch('/api/db');
+          db = await res.json();
+          renderAll();
+
+          const evtSource = new EventSource('/events');
+          evtSource.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'db-updated') {
+              db = msg.payload;
+              renderAll();
+            } else if (msg.type === 'voice-call') {
+              speakIndonesian(msg.payload.kalimat, msg.payload.gender);
+            } else if (msg.type === 'video-ducking') {
+              applyVideoMuteState(msg.payload.isSpeaking);
+            }
+          };
+        }
+      } catch (err) {
+        console.error('Gagal menginisialisasi aplikasi:', err);
+      }
+    }
+
+    function escapeHtmlText(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderAll() {
+      if (!db) return;
+
+      document.getElementById('navClinicName').innerText = db.settings.clinicName;
+      document.getElementById('navClinicPhone').innerText = 'Poli Kandungan (Poli Obgyn) | Telp: ' + db.settings.clinicPhone;
+      document.getElementById('tvClinicName').innerText = db.settings.clinicName;
+      document.getElementById('tvCardClinicName').innerText = db.settings.clinicName;
+      document.getElementById('tvClinicAddress').innerText = db.settings.clinicAddress;
+      document.getElementById('tvClinicPhone').innerText = db.settings.clinicPhone;
+      document.getElementById('tvRunningText').innerText = db.settings.runningText;
+
+      const newSig = JSON.stringify(db.settings.videoPlaylist || []);
+      if (newSig !== currentPlaylistSignature) {
+        currentPlaylistSignature = newSig;
+        playVideoAtIndex(0);
+      }
+
+      const totalToday = db.queues.history.length;
+      const waitingCount = db.queues.history.filter(q => !q.called).length;
+
+      document.getElementById('tvCurrentNumber').innerText = db.queues.currentCall.number;
+      document.getElementById('tvCurrentPoli').innerText = db.queues.currentCall.poli || 'POLI KANDUNGAN (POLI OBGYN)';
+      document.getElementById('cardPoliA').innerText = db.queues.poliCurrent.A || '-';
+      document.getElementById('cardTotalQueue').innerText = totalToday;
+      document.getElementById('cardWaitingQueue').innerText = waitingCount;
+
+      if (!isElectron) return;
+
+      document.getElementById('badgeVoiceType').innerText =
+        db.settings.voiceGender === 'female'
+          ? '👩 Suara: Cewek (Gadis Neural ID)'
+          : '👨 Suara: Cowok (Ardi Neural ID)';
+
+      const qBody = document.getElementById('queueTableBody');
+      if (db.queues.history.length === 0) {
+        qBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Belum ada nomor antrian hari ini. Klik tombol Ambil Nomor di sebelah kiri.</td></tr>';
+      } else {
+        qBody.innerHTML = db.queues.history.slice().reverse().map(item => `
+          <tr>
+            <td class="p-2.5 font-black text-base text-pink-700">${item.number}</td>
+            <td class="p-2.5 font-semibold">${item.poli}</td>
+            <td class="p-2.5"><span class="px-2 py-0.5 rounded text-xs font-bold ${item.called ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${item.called ? 'Sudah Dipanggil' : 'Menunggu'}</span></td>
+            <td class="p-2.5 text-right">
+              <button type="button" onclick="callQueue('${item.number}', '${item.poli}', '${item.code}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs font-bold cursor-pointer">
+                🔊 Panggil Suara
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      document.getElementById('setClinicName').value = db.settings.clinicName;
+      document.getElementById('setClinicPhone').value = db.settings.clinicPhone;
+      document.getElementById('setClinicAddress').value = db.settings.clinicAddress;
+      document.getElementById('setRunningText').value = db.settings.runningText;
+      document.getElementById('setVoiceGender').value = db.settings.voiceGender;
+
+      renderPatientsTable();
+      renderPlaylistEditor();
+      renderReports();
+    }
+
+    // ==================== MANAJEMEN DATA PASIEN (CARI, TAMBAH, EDIT, HAPUS) ====================
+    function renderPatientsTable() {
+      if (!db || !isElectron) return;
+      const tbody = document.getElementById('patientTableBody');
+      if (!tbody) return;
+
+      const query = (document.getElementById('searchPatientInput')?.value || '').trim().toLowerCase();
+
+      const indexedPatients = db.patients.map((p, idx) => ({
+        ...p,
+        _origIdx: idx,
+        _formattedDate: new Date(p.date).toLocaleDateString('id-ID')
+      }));
+
+      const filtered = indexedPatients.filter(p => {
+        if (!query) return true;
+        const haystack = [
+          p._formattedDate,
+          p.nik,
+          p.nama,
+          String(p.umur),
+          p.poli,
+          p.keluhan
+        ].join(' ').toLowerCase();
+        return haystack.indexOf(query) !== -1;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400 italic">Tidak ada data pasien yang cocok.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.slice().reverse().map(p => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-2 text-xs text-slate-500">${escapeHtmlText(p._formattedDate)}</td>
+          <td class="p-2 font-mono text-xs">${escapeHtmlText(p.nik)}</td>
+          <td class="p-2 font-bold text-slate-800">${escapeHtmlText(p.nama)}</td>
+          <td class="p-2">${escapeHtmlText(p.umur)} Thn</td>
+          <td class="p-2"><span class="bg-pink-100 text-pink-800 px-2 py-0.5 rounded text-xs font-bold">${escapeHtmlText(p.poli)}</span></td>
+          <td class="p-2 text-xs">${escapeHtmlText(p.keluhan)}</td>
+          <td class="p-2 text-right whitespace-nowrap">
+            <button type="button" onclick="startEditPatient(${p._origIdx})" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-2.5 py-1 rounded text-xs font-bold cursor-pointer mr-1">
+              ✏️ Edit
+            </button>
+            <button type="button" onclick="confirmDeletePatient(${p._origIdx})" class="bg-red-100 hover:bg-red-200 text-red-700 px-2.5 py-1 rounded text-xs font-bold cursor-pointer">
+              🗑️ Hapus
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function startEditPatient(index) {
+      const p = db.patients[index];
+      if (!p) return;
+      editingPatientIndex = index;
+      document.getElementById('pNik').value = p.nik || '';
+      document.getElementById('pNama').value = p.nama || '';
+      document.getElementById('pUmur').value = p.umur || '';
+      document.getElementById('pPoli').value = p.poli || 'POLI KANDUNGAN (POLI OBGYN)';
+      document.getElementById('pKeluhan').value = p.keluhan || '';
+
+      document.getElementById('patientFormTitle').innerText = 'Edit Data Pasien';
+      document.getElementById('patientEditBadge').classList.remove('hidden');
+      document.getElementById('pSubmitBtn').innerText = '💾 Update Data Pasien';
+      document.getElementById('pSubmitBtn').className = 'flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg font-bold cursor-pointer';
+      document.getElementById('pCancelEditBtn').classList.remove('hidden');
+    }
+
+    function cancelEditPatient() {
+      editingPatientIndex = -1;
+      document.getElementById('patientForm').reset();
+      document.getElementById('patientFormTitle').innerText = 'Registrasi Data Pasien';
+      document.getElementById('patientEditBadge').classList.add('hidden');
+      document.getElementById('pSubmitBtn').innerText = 'Simpan Data Pasien';
+      document.getElementById('pSubmitBtn').className = 'flex-1 bg-emerald-700 text-white py-2 rounded-lg font-bold hover:bg-emerald-600 cursor-pointer';
+      document.getElementById('pCancelEditBtn').classList.add('hidden');
+    }
+
+    async function savePatient(e) {
+      e.preventDefault();
+      const payload = {
+        nik: document.getElementById('pNik').value.trim(),
+        nama: document.getElementById('pNama').value.trim(),
+        umur: document.getElementById('pUmur').value,
+        poli: document.getElementById('pPoli').value,
+        keluhan: document.getElementById('pKeluhan').value.trim()
+      };
+
+      if (editingPatientIndex >= 0 && db.patients[editingPatientIndex]) {
+        db.patients[editingPatientIndex] = {
+          ...db.patients[editingPatientIndex],
+          ...payload
+        };
+        await ipcRenderer.invoke('save-db', db);
+        cancelEditPatient();
+        showToast('Data pasien berhasil diperbarui');
+      } else {
+        db.patients.push({
+          ...payload,
+          date: new Date().toISOString()
+        });
+        await ipcRenderer.invoke('save-db', db);
+        e.target.reset();
+        showToast('Data pasien baru berhasil disimpan');
+      }
+    }
+
+    function confirmDeletePatient(index) {
+      const p = db.patients[index];
+      if (!p) return;
+      openConfirmModal(
+        'Hapus Data Pasien',
+        'Apakah Anda yakin ingin menghapus data pasien "' + p.nama + '" (NIK: ' + p.nik + ')?',
+        async () => {
+          if (editingPatientIndex === index) cancelEditPatient();
+          db.patients.splice(index, 1);
+          await ipcRenderer.invoke('save-db', db);
+          showToast('Data pasien berhasil dihapus');
+        }
+      );
+    }
+
+    // ==================== MANAJEMEN LAPORAN KEUANGAN & OBAT (CARI, EDIT, HAPUS) ====================
+    function startEditFinance(index) {
+      const f = db.finances[index];
+      if (!f) return;
+      editingFinanceIndex = index;
+      document.getElementById('fKet').value = f.ket || '';
+      document.getElementById('fNominal').value = f.nominal || '';
+      document.getElementById('fTipe').value = f.tipe || 'MASUK';
+
+      document.getElementById('financeFormTitle').innerText = 'Edit Transaksi Keuangan';
+      document.getElementById('financeEditBadge').classList.remove('hidden');
+      document.getElementById('fSubmitBtn').innerText = '💾 Update';
+      document.getElementById('fSubmitBtn').className = 'flex-1 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold text-xs py-2 cursor-pointer';
+      document.getElementById('fCancelEditBtn').classList.remove('hidden');
+    }
+
+    function cancelEditFinance() {
+      editingFinanceIndex = -1;
+      document.getElementById('financeForm').reset();
+      document.getElementById('financeFormTitle').innerText = 'Laporan Keuangan Klinik';
+      document.getElementById('financeEditBadge').classList.add('hidden');
+      document.getElementById('fSubmitBtn').innerText = '+ Catat';
+      document.getElementById('fSubmitBtn').className = 'flex-1 bg-teal-600 hover:bg-teal-500 text-white rounded font-bold text-xs py-2 cursor-pointer';
+      document.getElementById('fCancelEditBtn').classList.add('hidden');
+    }
+
+    async function addFinance(e) {
+      e.preventDefault();
+      const payload = {
+        ket: document.getElementById('fKet').value.trim(),
+        nominal: Number(document.getElementById('fNominal').value),
+        tipe: document.getElementById('fTipe').value
+      };
+
+      if (editingFinanceIndex >= 0 && db.finances[editingFinanceIndex]) {
+        db.finances[editingFinanceIndex] = {
+          ...db.finances[editingFinanceIndex],
+          ...payload
+        };
+        await ipcRenderer.invoke('save-db', db);
+        cancelEditFinance();
+        showToast('Transaksi keuangan berhasil diperbarui');
+      } else {
+        db.finances.push({
+          ...payload,
+          date: new Date().toISOString()
+        });
+        await ipcRenderer.invoke('save-db', db);
+        e.target.reset();
+        showToast('Transaksi keuangan berhasil dicatat');
+      }
+    }
+
+    function confirmDeleteFinance(index) {
+      const f = db.finances[index];
+      if (!f) return;
+      openConfirmModal(
+        'Hapus Transaksi Keuangan',
+        'Apakah Anda yakin ingin menghapus transaksi "' + f.ket + '" sebesar Rp ' + Number(f.nominal).toLocaleString('id-ID') + '?',
+        async () => {
+          if (editingFinanceIndex === index) cancelEditFinance();
+          db.finances.splice(index, 1);
+          await ipcRenderer.invoke('save-db', db);
+          showToast('Transaksi keuangan berhasil dihapus');
+        }
+      );
+    }
+
+    function startEditMedicine(index) {
+      const m = db.medicines[index];
+      if (!m) return;
+      editingMedicineIndex = index;
+      document.getElementById('mNama').value = m.nama || '';
+      document.getElementById('mJumlah').value = m.jumlah || '';
+      document.getElementById('mStatus').value = m.status || 'KELUAR';
+
+      document.getElementById('medicineFormTitle').innerText = 'Edit Data Mutasi Obat';
+      document.getElementById('medicineEditBadge').classList.remove('hidden');
+      document.getElementById('mSubmitBtn').innerText = '💾 Update Data Obat';
+      document.getElementById('mSubmitBtn').className = 'flex-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded font-bold text-sm py-2 cursor-pointer';
+      document.getElementById('mCancelEditBtn').classList.remove('hidden');
+    }
+
+    function cancelEditMedicine() {
+      editingMedicineIndex = -1;
+      document.getElementById('medicineForm').reset();
+      document.getElementById('medicineFormTitle').innerText = 'Laporan Stok & Pemakaian Obat / Vitamin';
+      document.getElementById('medicineEditBadge').classList.add('hidden');
+      document.getElementById('mSubmitBtn').innerText = '+ Simpan Data Obat';
+      document.getElementById('mSubmitBtn').className = 'flex-1 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold text-sm py-2 cursor-pointer';
+      document.getElementById('mCancelEditBtn').classList.add('hidden');
+    }
+
+    async function addMedicine(e) {
+      e.preventDefault();
+      const payload = {
+        nama: document.getElementById('mNama').value.trim(),
+        jumlah: Number(document.getElementById('mJumlah').value),
+        status: document.getElementById('mStatus').value
+      };
+
+      if (editingMedicineIndex >= 0 && db.medicines[editingMedicineIndex]) {
+        db.medicines[editingMedicineIndex] = {
+          ...db.medicines[editingMedicineIndex],
+          ...payload
+        };
+        await ipcRenderer.invoke('save-db', db);
+        cancelEditMedicine();
+        showToast('Data obat berhasil diperbarui');
+      } else {
+        db.medicines.push({
+          ...payload,
+          date: new Date().toISOString()
+        });
+        await ipcRenderer.invoke('save-db', db);
+        e.target.reset();
+        showToast('Data mutasi obat berhasil disimpan');
+      }
+    }
+
+    function confirmDeleteMedicine(index) {
+      const m = db.medicines[index];
+      if (!m) return;
+      openConfirmModal(
+        'Hapus Data Obat',
+        'Apakah Anda yakin ingin menghapus data obat "' + m.nama + '" (' + m.jumlah + ' Unit - ' + m.status + ')?',
+        async () => {
+          if (editingMedicineIndex === index) cancelEditMedicine();
+          db.medicines.splice(index, 1);
+          await ipcRenderer.invoke('save-db', db);
+          showToast('Data obat berhasil dihapus');
+        }
+      );
+    }
+
+    function setReportFilter(period) {
+      reportPeriod = period;
+      document.getElementById('btnWeekly').className = period === 'weekly'
+        ? 'bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold cursor-pointer'
+        : 'bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer';
+      document.getElementById('btnMonthly').className = period === 'monthly'
+        ? 'bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold cursor-pointer'
+        : 'bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold cursor-pointer';
+      renderReports();
+    }
+
+    function renderReports() {
+      if (!db || !isElectron) return;
+      const daysLimit = reportPeriod === 'weekly' ? 7 : 30;
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - daysLimit);
+
+      const finQuery = (document.getElementById('searchFinanceInput')?.value || '').trim().toLowerCase();
+      const medQuery = (document.getElementById('searchMedicineInput')?.value || '').trim().toLowerCase();
+
+      // Filter Keuangan berdasarkan periode & kata kunci pencarian
+      const indexedFinances = db.finances.map((f, idx) => ({
+        ...f,
+        _origIdx: idx,
+        _formattedDate: new Date(f.date).toLocaleDateString('id-ID')
+      })).filter(f => new Date(f.date) >= cutoff);
+
+      const searchedFinances = indexedFinances.filter(f => {
+        if (!finQuery) return true;
+        const haystack = [
+          f._formattedDate,
+          f.ket,
+          f.tipe,
+          String(f.nominal)
+        ].join(' ').toLowerCase();
+        return haystack.indexOf(finQuery) !== -1;
+      });
+
+      let masuk = 0, keluar = 0;
+      searchedFinances.forEach(f => {
+        if (f.tipe === 'MASUK') masuk += Number(f.nominal);
+        else keluar += Number(f.nominal);
+      });
+
+      const finTbody = document.getElementById('financeTableBody');
+      if (searchedFinances.length === 0) {
+        finTbody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-slate-400 italic">Tidak ada transaksi keuangan yang cocok.</td></tr>';
+      } else {
+        finTbody.innerHTML = searchedFinances.slice().reverse().map(f => `
+          <tr class="hover:bg-slate-50">
+            <td class="p-2 text-slate-500">${escapeHtmlText(f._formattedDate)}</td>
+            <td class="p-2 font-semibold text-slate-800">${escapeHtmlText(f.ket)}</td>
+            <td class="p-2"><span class="px-1.5 py-0.5 rounded font-bold ${f.tipe === 'MASUK' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">${escapeHtmlText(f.tipe)}</span></td>
+            <td class="p-2 font-bold">Rp ${Number(f.nominal).toLocaleString('id-ID')}</td>
+            <td class="p-2 text-right whitespace-nowrap">
+              <button type="button" onclick="startEditFinance(${f._origIdx})" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-0.5 rounded font-bold cursor-pointer mr-1">✏️</button>
+              <button type="button" onclick="confirmDeleteFinance(${f._origIdx})" class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold cursor-pointer">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+      document.getElementById('sumMasuk').innerText = 'Rp ' + masuk.toLocaleString('id-ID');
+      document.getElementById('sumKeluar').innerText = 'Rp ' + keluar.toLocaleString('id-ID');
+
+      // Filter Obat berdasarkan periode & kata kunci pencarian
+      const indexedMedicines = db.medicines.map((m, idx) => ({
+        ...m,
+        _origIdx: idx,
+        _formattedDate: new Date(m.date).toLocaleDateString('id-ID')
+      })).filter(m => new Date(m.date) >= cutoff);
+
+      const searchedMedicines = indexedMedicines.filter(m => {
+        if (!medQuery) return true;
+        const haystack = [
+          m._formattedDate,
+          m.nama,
+          m.status,
+          String(m.jumlah)
+        ].join(' ').toLowerCase();
+        return haystack.indexOf(medQuery) !== -1;
+      });
+
+      let obatMasuk = 0, obatKeluar = 0;
+      searchedMedicines.forEach(m => {
+        if (m.status === 'MASUK') obatMasuk += Number(m.jumlah);
+        else obatKeluar += Number(m.jumlah);
+      });
+
+      const medTbody = document.getElementById('medicineTableBody');
+      if (searchedMedicines.length === 0) {
+        medTbody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-slate-400 italic">Tidak ada data mutasi obat yang cocok.</td></tr>';
+      } else {
+        medTbody.innerHTML = searchedMedicines.slice().reverse().map(m => `
+          <tr class="hover:bg-slate-50">
+            <td class="p-2 text-slate-500">${escapeHtmlText(m._formattedDate)}</td>
+            <td class="p-2 font-semibold text-slate-800">${escapeHtmlText(m.nama)}</td>
+            <td class="p-2"><span class="px-1.5 py-0.5 rounded font-bold ${m.status === 'MASUK' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}">${escapeHtmlText(m.status)}</span></td>
+            <td class="p-2 font-bold">${Number(m.jumlah)} Unit</td>
+            <td class="p-2 text-right whitespace-nowrap">
+              <button type="button" onclick="startEditMedicine(${m._origIdx})" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-2 py-0.5 rounded font-bold cursor-pointer mr-1">✏️</button>
+              <button type="button" onclick="confirmDeleteMedicine(${m._origIdx})" class="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-0.5 rounded font-bold cursor-pointer">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+      document.getElementById('sumObatMasuk').innerText = obatMasuk + ' Unit';
+      document.getElementById('sumObatKeluar').innerText = obatKeluar + ' Unit';
+    }
+
+    // ==================== ANTRIAN & PEMANGGILAN SUARA ====================
+    async function takeQueue(code, poliName) {
+      db.queues.counters[code] = (db.queues.counters[code] || 0) + 1;
+      const formattedNum = code + '-' + String(db.queues.counters[code]).padStart(3, '0');
+      db.queues.history.push({
+        number: formattedNum,
+        poli: poliName,
+        code: code,
+        called: false,
+        timestamp: new Date().toISOString()
+      });
+      await ipcRenderer.invoke('save-db', db);
+      showToast('Nomor Antrian ' + formattedNum + ' berhasil dibuat');
+
+      document.getElementById('printClinicName').innerText = db.settings.clinicName;
+      document.getElementById('printClinicAddress').innerText = db.settings.clinicAddress;
+      document.getElementById('printClinicPhone').innerText = 'Telp: ' + db.settings.clinicPhone;
+      document.getElementById('printNumber').innerText = formattedNum;
+      document.getElementById('printPoli').innerText = poliName;
+      document.getElementById('printTime').innerText = new Date().toLocaleString('id-ID');
+      document.getElementById('printArea').classList.remove('hidden');
+
+      if (ipcRenderer) {
+        await ipcRenderer.invoke('print-ticket');
+      } else {
+        window.print();
+      }
+      document.getElementById('printArea').classList.add('hidden');
+    }
+
+    function resetAllQueues() {
+      openConfirmModal(
+        'Reset Nomor Antrian Hari Ini',
+        'Apakah Anda yakin ingin mereset seluruh urutan nomor antrian hari ini kembali ke 0?',
+        async () => {
+          db.queues = {
+            counters: { A: 0 },
+            currentCall: { number: '-', poli: 'POLI KANDUNGAN (POLI OBGYN)', code: 'A' },
+            poliCurrent: { A: '-' },
+            history: []
+          };
+          await ipcRenderer.invoke('save-db', db);
+          showToast('Semua nomor antrian berhasil direset ke 0');
+        }
+      );
+    }
+
+    function playChime() {
+      return new Promise(resolve => {
+        try {
+          const ctx = getAudioContext();
+          const now = ctx.currentTime;
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc1.frequency.setValueAtTime(660, now);
+          osc2.frequency.setValueAtTime(528, now + 0.35);
+
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.9);
+
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc1.start(now);
+          osc1.stop(now + 0.35);
+          osc2.start(now + 0.35);
+          osc2.stop(now + 0.9);
+
+          setTimeout(resolve, 950);
+        } catch (e) {
+          resolve();
+        }
+      });
+    }
+
+    function formatQueueNumberToIndonesianWords(numberStr) {
+      const digitMap = {
+        '0': 'kosong',
+        '1': 'satu',
+        '2': 'dua',
+        '3': 'tiga',
+        '4': 'empat',
+        '5': 'lima',
+        '6': 'enam',
+        '7': 'tujuh',
+        '8': 'delapan',
+        '9': 'sembilan'
+      };
+      const parts = String(numberStr).replace('-', ' ').split('');
+      const words = [];
+      for (let i = 0; i < parts.length; i++) {
+        const ch = parts[i].trim();
+        if (!ch) continue;
+        if (digitMap[ch]) {
+          words.push(digitMap[ch]);
+        } else {
+          words.push(ch);
+        }
+      }
+      return words.join(', ');
+    }
+
+    function playNeuralMp3Base64(base64Str, gender, engineType) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const ctx = getAudioContext();
+          if (activeAudioSource) {
+            try { activeAudioSource.stop(); } catch (e) {}
+            activeAudioSource = null;
+          }
+
+          const binaryStr = window.atob(base64Str);
+          const len = binaryStr.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+
+          const audioBuffer = await ctx.decodeAudioData(bytes.buffer.slice(0));
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+
+          if (engineType === 'google-neural' && gender === 'male') {
+            source.detune.value = -360;
+            source.playbackRate.value = 0.96;
+
+            const bassFilter = ctx.createBiquadFilter();
+            bassFilter.type = 'lowshelf';
+            bassFilter.frequency.value = 240;
+            bassFilter.gain.value = 4.5;
+
+            source.connect(bassFilter);
+            bassFilter.connect(ctx.destination);
+          } else {
+            source.connect(ctx.destination);
+          }
+
+          activeAudioSource = source;
+          source.onended = () => {
+            activeAudioSource = null;
+            resolve();
+          };
+          source.start(0);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    function speakFallbackOfflinePromise(text, targetGender) {
+      return new Promise((resolve) => {
+        if (!('speechSynthesis' in window)) {
+          return resolve();
+        }
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'id-ID';
+        const voices = window.speechSynthesis.getVoices();
+        if (targetGender === 'female') {
+          const vFemale = voices.find(v =>
+            v.name.toLowerCase().includes('gadis') ||
+            v.name.toLowerCase().includes('zira') ||
+            v.name.toLowerCase().includes('female')
+          );
+          if (vFemale) utter.voice = vFemale;
+          utter.pitch = 1.2;
+          utter.rate = 0.92;
+        } else {
+          const vMale = voices.find(v =>
+            v.name.toLowerCase().includes('ardi') ||
+            v.name.toLowerCase().includes('andika') ||
+            v.name.toLowerCase().includes('david') ||
+            v.name.toLowerCase().includes('male')
+          );
+          if (vMale) utter.voice = vMale;
+          utter.pitch = 0.8;
+          utter.rate = 0.92;
+        }
+        utter.onend = () => resolve();
+        utter.onerror = () => resolve();
+        window.speechSynthesis.speak(utter);
+      });
+    }
+
+    async function speakIndonesian(text, gender) {
+      const myCallId = ++currentCallSequenceId;
+      const targetGender = (gender === 'male') ? 'male' : 'female';
+
+      applyVideoMuteState(true);
+      if (isElectron && ipcRenderer) {
+        ipcRenderer.send('voice-ducking-state', true);
+      }
+
+      try {
+        await playChime();
+        if (myCallId !== currentCallSequenceId) return;
+
+        let playedNeural = false;
+        try {
+          let ttsResult = null;
+          if (isElectron && ipcRenderer) {
+            ttsResult = await ipcRenderer.invoke('synthesize-voice', {
+              text: text,
+              gender: targetGender
+            });
+          } else {
+            const res = await fetch('/api/tts?text=' + encodeURIComponent(text) + '&gender=' + encodeURIComponent(targetGender));
+            ttsResult = await res.json();
+          }
+
+          if (myCallId !== currentCallSequenceId) return;
+
+          if (ttsResult && ttsResult.success && ttsResult.audioBase64) {
+            await playNeuralMp3Base64(ttsResult.audioBase64, targetGender, ttsResult.engine);
+            playedNeural = true;
+          }
+        } catch (err) {
+          console.warn('Neural TTS gagal, beralih ke fallback lokal:', err);
+        }
+
+        if (!playedNeural && myCallId === currentCallSequenceId) {
+          await speakFallbackOfflinePromise(text, targetGender);
+        }
+      } finally {
+        if (myCallId === currentCallSequenceId) {
+          setTimeout(() => {
+            if (myCallId === currentCallSequenceId) {
+              applyVideoMuteState(false);
+              if (isElectron && ipcRenderer) {
+                ipcRenderer.send('voice-ducking-state', false);
+              }
+            }
+          }, 300);
+        }
+      }
+    }
+
+    async function callQueue(number, poli, code) {
+      db.queues.currentCall = { number: number, poli: poli, code: code };
+      db.queues.poliCurrent[code] = number;
+      db.queues.history.forEach(q => {
+        if (q.number === number) q.called = true;
+      });
+      await ipcRenderer.invoke('save-db', db);
+
+      const ejaanIndonesia = formatQueueNumberToIndonesianWords(number);
+      const kalimat = 'Nomor antrian, ' + ejaanIndonesia + '. Silakan menuju ke Poli Kandungan.';
+      showToast('🔊 Memanggil ' + number + ' — Video Otomatis Mute Sementara');
+
+      ipcRenderer.send('broadcast-voice-call', {
+        kalimat: kalimat,
+        gender: db.settings.voiceGender
+      });
+
+      await speakIndonesian(kalimat, db.settings.voiceGender);
+    }
+
+    function testVoice() {
+      const gender = document.getElementById('setVoiceGender').value;
+      const label = gender === 'male' ? 'Cowok (Ardi Neural Indonesia)' : 'Cewek (Gadis Neural Indonesia)';
+      showToast('🔊 Memutar tes suara ' + label + '...');
+      speakIndonesian('Nomor antrian, A, kosong, kosong, satu. Silakan menuju ke Poli Kandungan.', gender);
+    }
+
+    // Generator Grafik Visual Resolusi Tinggi (HTML5 Canvas) untuk disematkan ke Dashboard Excel (.xlsx)
+    function generateDashboardChartsForExcel() {
+      const daysLimit = reportPeriod === 'weekly' ? 7 : 30;
+      const labelPeriode = reportPeriod === 'weekly' ? 'Mingguan (7 Hari)' : 'Bulanan (30 Hari)';
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - daysLimit);
+
+      const filteredFin = db.finances.filter(f => new Date(f.date) >= cutoff);
+      const filteredMed = db.medicines.filter(m => new Date(m.date) >= cutoff);
+
+      let totalMasuk = 0, totalKeluar = 0;
+      filteredFin.forEach(f => {
+        if (f.tipe === 'MASUK') totalMasuk += Number(f.nominal);
+        else totalKeluar += Number(f.nominal);
+      });
+      const saldo = totalMasuk - totalKeluar;
+
+      let obatMasuk = 0, obatKeluar = 0;
+      filteredMed.forEach(m => {
+        if (m.status === 'MASUK') obatMasuk += Number(m.jumlah);
+        else obatKeluar += Number(m.jumlah);
+      });
+
+      // 1. Canvas Grafik Keuangan
+      const c1 = document.createElement('canvas');
+      c1.width = 760;
+      c1.height = 350;
+      const ctx1 = c1.getContext('2d');
+
+      ctx1.fillStyle = '#FFFFFF';
+      ctx1.fillRect(0, 0, c1.width, c1.height);
+      ctx1.strokeStyle = '#CBD5E1';
+      ctx1.lineWidth = 2;
+      ctx1.strokeRect(1, 1, c1.width - 2, c1.height - 2);
+
+      // Header Banner Grafik 1
+      ctx1.fillStyle = '#065F46';
+      ctx1.fillRect(0, 0, c1.width, 46);
+      ctx1.fillStyle = '#FFFFFF';
+      ctx1.font = 'bold 16px Segoe UI, sans-serif';
+      ctx1.fillText('GRAFIK KEUANGAN KLINIK — ' + labelPeriode.toUpperCase(), 18, 29);
+
+      const finBars = [
+        { label: 'Total Pemasukan', val: totalMasuk, color: '#10B981', bg: '#DCFCE7' },
+        { label: 'Total Pengeluaran', val: totalKeluar, color: '#EF4444', bg: '#FEE2E2' },
+        { label: 'Saldo Kas Bersih', val: Math.max(0, saldo), color: '#0F766E', bg: '#CCFBF1' }
+      ];
+      const maxVal1 = Math.max(1, ...finBars.map(b => b.val));
+
+      // Gridlines
+      ctx1.strokeStyle = '#E2E8F0';
+      ctx1.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = 80 + i * 50;
+        ctx1.beginPath();
+        ctx1.moveTo(60, y);
+        ctx1.lineTo(710, y);
+        ctx1.stroke();
+      }
+
+      finBars.forEach((bar, idx) => {
+        const x = 110 + idx * 200;
+        const maxBarH = 190;
+        const barH = Math.max(8, Math.round((bar.val / maxVal1) * maxBarH));
+        const y = 280 - barH;
+
+        ctx1.fillStyle = bar.color;
+        ctx1.fillRect(x, y, 110, barH);
+
+        ctx1.fillStyle = '#0F172A';
+        ctx1.font = 'bold 13px Segoe UI, sans-serif';
+        ctx1.textAlign = 'center';
+        ctx1.fillText('Rp ' + bar.val.toLocaleString('id-ID'), x + 55, y - 10);
+
+        ctx1.fillStyle = '#334155';
+        ctx1.font = 'bold 13px Segoe UI, sans-serif';
+        ctx1.fillText(bar.label, x + 55, 306);
+      });
+
+      ctx1.textAlign = 'left';
+      ctx1.fillStyle = '#64748B';
+      ctx1.font = 'italic 11px Segoe UI, sans-serif';
+      ctx1.fillText(db.settings.clinicName + ' | @copyright iman.mn_', 18, 336);
+
+      // 2. Canvas Grafik Obat
+      const c2 = document.createElement('canvas');
+      c2.width = 760;
+      c2.height = 350;
+      const ctx2 = c2.getContext('2d');
+
+      ctx2.fillStyle = '#FFFFFF';
+      ctx2.fillRect(0, 0, c2.width, c2.height);
+      ctx2.strokeStyle = '#CBD5E1';
+      ctx2.lineWidth = 2;
+      ctx2.strokeRect(1, 1, c2.width - 2, c2.height - 2);
+
+      ctx2.fillStyle = '#0F766E';
+      ctx2.fillRect(0, 0, c2.width, 46);
+      ctx2.fillStyle = '#FFFFFF';
+      ctx2.font = 'bold 16px Segoe UI, sans-serif';
+      ctx2.fillText('GRAFIK MUTASI STOK & PEMAKAIAN OBAT — ' + labelPeriode.toUpperCase(), 18, 29);
+
+      const medBars = [
+        { label: 'Obat Masuk (Restock)', val: obatMasuk, color: '#2563EB' },
+        { label: 'Obat Keluar (Resep)', val: obatKeluar, color: '#D97706' },
+        { label: 'Kunjungan Pasien', val: db.patients.filter(p => new Date(p.date) >= cutoff).length, color: '#DB2777' }
+      ];
+      const maxVal2 = Math.max(1, ...medBars.map(b => b.val));
+
+      ctx2.strokeStyle = '#E2E8F0';
+      ctx2.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = 80 + i * 50;
+        ctx2.beginPath();
+        ctx2.moveTo(60, y);
+        ctx2.lineTo(710, y);
+        ctx2.stroke();
+      }
+
+      medBars.forEach((bar, idx) => {
+        const x = 110 + idx * 200;
+        const maxBarH = 190;
+        const barH = Math.max(8, Math.round((bar.val / maxVal2) * maxBarH));
+        const y = 280 - barH;
+
+        ctx2.fillStyle = bar.color;
+        ctx2.fillRect(x, y, 110, barH);
+
+        ctx2.fillStyle = '#0F172A';
+        ctx2.font = 'bold 14px Segoe UI, sans-serif';
+        ctx2.textAlign = 'center';
+        const unitLabel = idx === 2 ? ' Pasien' : ' Unit';
+        ctx2.fillText(bar.val.toLocaleString('id-ID') + unitLabel, x + 55, y - 10);
+
+        ctx2.fillStyle = '#334155';
+        ctx2.font = 'bold 13px Segoe UI, sans-serif';
+        ctx2.fillText(bar.label, x + 55, 306);
+      });
+
+      ctx2.textAlign = 'left';
+      ctx2.fillStyle = '#64748B';
+      ctx2.font = 'italic 11px Segoe UI, sans-serif';
+      ctx2.fillText(db.settings.clinicName + ' | @copyright iman.mn_', 18, 336);
+
+      return {
+        financeChart: c1.toDataURL('image/png'),
+        medicineChart: c2.toDataURL('image/png')
+      };
+    }
+
+    async function exportReportToExcel() {
+      showToast('📊 Menyiapkan Dashboard Excel beserta Tabel & Grafik...');
+      const charts = generateDashboardChartsForExcel();
+      const res = await ipcRenderer.invoke('export-excel', {
+        period: reportPeriod,
+        charts: charts
+      });
+      if (res.success) {
+        showToast('✅ Dashboard Excel berhasil disimpan: ' + res.filePath);
+      }
+    }
+
+    async function saveSettings() {
+      db.settings.clinicName = document.getElementById('setClinicName').value;
+      db.settings.clinicPhone = document.getElementById('setClinicPhone').value;
+      db.settings.clinicAddress = document.getElementById('setClinicAddress').value;
+      db.settings.runningText = document.getElementById('setRunningText').value;
+      db.settings.voiceGender = document.getElementById('setVoiceGender').value;
+      await ipcRenderer.invoke('save-db', db);
+      showToast('Pengaturan & Suara Pemanggil berhasil disimpan!');
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
+    initApp();
+  </script>
+</body>
+</html>
